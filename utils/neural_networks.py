@@ -17,7 +17,8 @@ def retrieve_models() -> list[dict]:
     architectures = [
         [784, 30, 15, 10],
         [784, 40, 20, 10],
-        [784, 80, 40, 20, 10]
+        [784, 80, 40, 20, 10],
+        [784, 100, 50, 25, 20, 10],
     ]
 
     for architecture in architectures:

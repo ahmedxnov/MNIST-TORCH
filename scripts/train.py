@@ -7,8 +7,10 @@ from sklearn.metrics import f1_score
 from config import PROJECT_ROOT, BATCH_SIZE, DEVICE, EPOCHS
 
 
-def train_model(model : dict, train_loader : DataLoader, dev_loader : DataLoader, model_name: str) -> None:
+def train_model(model : dict, train_loader : DataLoader, dev_loader : DataLoader, model_name: str) -> tuple[float, dict]:
     model["model"].to(DEVICE)
+    best_dev_f1 = 0.0
+    best_model_state = None
 
     for epoch in range(EPOCHS):
         model["model"].train()
@@ -58,10 +60,17 @@ def train_model(model : dict, train_loader : DataLoader, dev_loader : DataLoader
 
         dev_accuracy = (all_predictions == all_labels).sum().item() / len(all_labels)
         dev_f1 = f1_score(all_labels, all_predictions, average="weighted")
+        
+        # Track best dev F1 score and save best model state
+        if dev_f1 > best_dev_f1:
+            best_dev_f1 = dev_f1
+            best_model_state = model["model"].state_dict().copy()
 
         print(f"{model_name} - Epoch {epoch+1}/{EPOCHS} | Loss: {epoch_loss:.4f} | "
               f"Train Acc: {train_accuracy:.4f}, Train F1: {train_f1:.4f} | "
               f"Dev Acc: {dev_accuracy:.4f}, Dev F1: {dev_f1:.4f}")
+    
+    return best_dev_f1, best_model_state
 
 
 def main():
@@ -101,11 +110,34 @@ def main():
 
     models  : list[dict] = neural_networks.retrieve_models()
 
+    best_overall_model_idx = 0
+    best_overall_f1 = 0.0
+    best_overall_model_state = None
+
     for idx, model in enumerate(models, 1):
         print(f"\n{'='*80}")
         print(f"Training Model {idx}")
         print(f"{'='*80}")
-        train_model(model, train_loader, dev_loader, f"Model {idx}")
+        best_f1, best_state = train_model(model, train_loader, dev_loader, f"Model {idx}")
+        
+        print(f"Best Dev F1 for Model {idx}: {best_f1:.4f}")
+        
+        # Track best model across all models
+        if best_f1 > best_overall_f1:
+            best_overall_f1 = best_f1
+            best_overall_model_idx = idx
+            best_overall_model_state = best_state
+    
+    # Save best model
+    models_dir = PROJECT_ROOT / "models"
+    models_dir.mkdir(exist_ok=True)
+    best_model_path = models_dir / "best_model.pth"
+    torch.save(best_overall_model_state, best_model_path)
+    
+    print(f"\n{'='*80}")
+    print(f"Best Model: Model {best_overall_model_idx} with Dev F1: {best_overall_f1:.4f}")
+    print(f"Model saved to: {best_model_path}")
+    print(f"{'='*80}")
 
 
 if __name__ == "__main__":

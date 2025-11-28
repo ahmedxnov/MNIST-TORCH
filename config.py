@@ -14,5 +14,5 @@ LEARNING_RATE = 0.01
 
 #Training Settings
 BATCH_SIZE = 64
-EPOCHS = 5
+EPOCHS = 10
 DEVICE = "cuda" if cuda.is_available() else "cpu"
